@@ -7,7 +7,7 @@ const PORT = 3000;
 
 let dbPool;
 
-// Função para buscar o segredo do Secrets Manager
+// Funcao para buscar o segredo do Secrets Manager
 async function getDatabaseCredentials() {
     const secretArn = process.env.DB_SECRET_ARN;
     if (!secretArn) {
