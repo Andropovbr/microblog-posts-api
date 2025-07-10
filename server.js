@@ -1,5 +1,4 @@
 const express = require('express');
-const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
 const { Pool } = require('pg');
 
 const app = express();
@@ -7,25 +6,20 @@ const PORT = 3000;
 
 let dbPool;
 
-// Funcao para buscar o segredo do Secrets Manager
-async function getDatabaseCredentials() {
-    const secretArn = process.env.DB_SECRET_ARN;
-    if (!secretArn) {
-        console.error("A variável de ambiente DB_SECRET_ARN não está definida.");
+// Função para ler as credenciais diretamente do ambiente
+function getDatabaseCredentials() {
+    // O ECS injeta o CONTEÚDO do segredo nesta variável de ambiente
+    const secretJson = process.env.DB_SECRET_ARN;
+    if (!secretJson) {
+        console.error("A variável de ambiente com o segredo do DB (DB_SECRET_ARN) não está definida.");
         throw new Error("Segredo do DB não configurado.");
     }
 
-    const client = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
-    const command = new GetSecretValueCommand({ SecretId: secretArn });
-
     try {
-        const data = await client.send(command);
-        if ('SecretString' in data) {
-            return JSON.parse(data.SecretString);
-        }
-        throw new Error("Formato de segredo inesperado.");
+        // Apenas fazemos o parse do JSON que já recebemos
+        return JSON.parse(secretJson);
     } catch (err) {
-        console.error("Erro ao buscar o segredo:", err);
+        console.error("Erro ao fazer o parse do segredo JSON:", err);
         throw err;
     }
 }
@@ -33,7 +27,7 @@ async function getDatabaseCredentials() {
 // Função para inicializar a conexão com o banco de dados e criar a tabela
 async function initializeDatabase() {
     try {
-        const credentials = await getDatabaseCredentials();
+        const credentials = getDatabaseCredentials();
         
         dbPool = new Pool({
             host: credentials.host,
