@@ -4,19 +4,19 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = 3000;
 
+// NOVO: Middleware para o Express entender o corpo de requisições JSON
+app.use(express.json());
+
 let dbPool;
 
 // Função para ler as credenciais diretamente do ambiente
 function getDatabaseCredentials() {
-    // O ECS injeta o CONTEÚDO do segredo nesta variável de ambiente
     const secretJson = process.env.DB_SECRET_ARN;
     if (!secretJson) {
         console.error("A variável de ambiente com o segredo do DB (DB_SECRET_ARN) não está definida.");
         throw new Error("Segredo do DB não configurado.");
     }
-
     try {
-        // Apenas fazemos o parse do JSON que já recebemos
         return JSON.parse(secretJson);
     } catch (err) {
         console.error("Erro ao fazer o parse do segredo JSON:", err);
@@ -28,20 +28,15 @@ function getDatabaseCredentials() {
 async function initializeDatabase() {
     try {
         const credentials = getDatabaseCredentials();
-        
         dbPool = new Pool({
             host: credentials.host,
             port: credentials.port,
             user: credentials.username,
             password: credentials.password,
             database: credentials.dbname,
-            ssl: {
-                // Necessário para conectar ao RDS, que exige SSL
-                rejectUnauthorized: false 
-            }
+            ssl: { rejectUnauthorized: false }
         });
 
-        // Conecta e cria a tabela se ela não existir
         const client = await dbPool.connect();
         console.log("Conectado ao banco de dados com sucesso!");
 
@@ -55,7 +50,6 @@ async function initializeDatabase() {
         `);
         console.log("Tabela 'posts' verificada/criada com sucesso.");
         
-        // Insere alguns dados de exemplo se a tabela estiver vazia
         const res = await client.query('SELECT COUNT(*) FROM posts');
         if (res.rows[0].count === '0') {
             await client.query(`
@@ -66,12 +60,9 @@ async function initializeDatabase() {
             `);
             console.log("Dados de exemplo inseridos na tabela 'posts'.");
         }
-
         client.release();
-
     } catch (err) {
         console.error("Falha ao inicializar o banco de dados:", err);
-        // Se a inicialização falhar, a aplicação não deve subir
         process.exit(1);
     }
 }
@@ -89,6 +80,29 @@ app.get('/api/posts', async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error("Erro ao buscar posts:", err);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+// NOVO: Rota para criar um novo post
+app.post('/api/posts', async (req, res) => {
+    const { title, content } = req.body;
+
+    if (!title || !content) {
+        return res.status(400).json({ error: 'Título e conteúdo são obrigatórios.' });
+    }
+
+    try {
+        const client = await dbPool.connect();
+        const result = await client.query(
+            'INSERT INTO posts (title, content) VALUES ($1, $2) RETURNING *',
+            [title, content]
+        );
+        client.release();
+        // Retorna o post recém-criado
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error("Erro ao criar post:", err);
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
