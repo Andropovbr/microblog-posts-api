@@ -20,6 +20,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # --- NOVO PASSO DE DEPURAÇÃO ---
+      - name: List files in workspace
+        run: ls -laR
+      # --------------------------------
+
       - name: Debug GitHub Context
         run: echo "${{ toJSON(github) }}"
 
