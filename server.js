@@ -107,7 +107,7 @@ app.post('/api/posts', async (req, res) => {
     }
 });
 
-// Inicia o servidor após inicializar o banco de dados
+// Inicia o servidor apos inicializar o banco de dados
 initializeDatabase().then(() => {
     app.listen(PORT, () => {
         console.log(`API de Posts a correr na porta ${PORT}`);

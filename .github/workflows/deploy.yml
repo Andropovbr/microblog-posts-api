@@ -1,9 +1,10 @@
-name: Deploy Posts API to Amazon ECS
+name: Deploy to Amazon ECS
 
 on:
   push:
     branches:
-      - main
+      - main       # Aciona para o ambiente de dev
+      - production # Aciona para o ambiente de prod
 
 permissions:
   id-token: write
@@ -11,7 +12,10 @@ permissions:
 
 jobs:
   deploy:
+    # --- NOVO: Define o ambiente com base na branch ---
+    environment: ${{ github.ref == 'refs/heads/production' && 'production' || 'development' }}
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,8 +23,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }} # Segredo do ambiente
+          aws-region: ${{ secrets.AWS_REGION }}             # Segredo do ambiente
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -38,6 +42,22 @@ jobs:
           docker push $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest
           echo "image=$ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Force new ECS deployment
+      - name: Replace execution role ARN in task definition
         run: |
-          aws ecs update-service --cluster ${{ secrets.ECS_CLUSTER }} --service ${{ secrets.ECS_SERVICE }} --force-new-deployment
+          sed -i "s|\${ECS_EXECUTION_ROLE_ARN}|${{ secrets.ECS_EXECUTION_ROLE_ARN }}|g" ${{ secrets.ECS_TASK_DEFINITION }}
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ secrets.ECS_TASK_DEFINITION }}
+          container-name: ${{ secrets.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ secrets.ECS_SERVICE }} # Segredo do ambiente
+          cluster: ${{ secrets.ECS_CLUSTER }} # Segredo do ambiente
+          wait-for-service-stability: true
