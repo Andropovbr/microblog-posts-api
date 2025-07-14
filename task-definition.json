@@ -1,0 +1,32 @@
+{
+    "family": "microblog-posts-api-task",
+    "executionRoleArn": "${ECS_EXECUTION_ROLE_ARN}",
+    "containerDefinitions": [
+        {
+            "name": "posts-api-container",
+            "image": "IMAGE_PLACEHOLDER",
+            "cpu": 256,
+            "memory": 512,
+            "portMappings": [
+                {
+                    "containerPort": 3000,
+                    "hostPort": 3000,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "secrets": [
+                {
+                    "name": "DB_SECRET_ARN",
+                    "valueFrom": "${DB_SECRET_ARN_PLACEHOLDER}"
+                }
+            ]
+        }
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "networkMode": "awsvpc",
+    "cpu": "256",
+    "memory": "512"
+}
