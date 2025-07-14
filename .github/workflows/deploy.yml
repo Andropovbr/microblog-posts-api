@@ -54,6 +54,11 @@ jobs:
         run: |
           sed -i "s|\${ECS_EXECUTION_ROLE_ARN}|${{ secrets.ECS_EXECUTION_ROLE_ARN }}|g" ${{ secrets.ECS_TASK_DEFINITION }}
 
+      - name: Replace DB secret ARN in task definition
+        run: |
+          sed -i "s|\${DB_SECRET_ARN}|${{ secrets.DB_SECRET_ARN }}|g" ${{ secrets.ECS_TASK_DEFINITION }}
+
+      
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
