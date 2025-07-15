@@ -9,7 +9,7 @@ app.use(express.json());
 
 let dbPool;
 
-// Função para ler as credenciais diretamente do ambiente
+// Funcao para ler as credenciais diretamente do ambiente
 function getDatabaseCredentials() {
     const secretJson = process.env.DB_SECRET_ARN;
     if (!secretJson) {
