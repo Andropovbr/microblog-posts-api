@@ -24,7 +24,7 @@ function getDatabaseCredentials() {
     }
 }
 
-// Função para inicializar a conexão com o banco de dados e criar a tabela
+// Funcao para inicializar a conexão com o banco de dados e criar a tabela
 async function initializeDatabase() {
     try {
         const credentials = getDatabaseCredentials();
