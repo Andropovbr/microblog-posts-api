@@ -46,6 +46,10 @@ jobs:
           sed -i "s|\${ECS_EXECUTION_ROLE_ARN}|${{ secrets.ECS_EXECUTION_ROLE_ARN }}|g" ${{ secrets.ECS_TASK_DEFINITION }}
           sed -i "s|\${DB_SECRET_ARN}|${{ secrets.DB_SECRET_ARN }}|g" ${{ secrets.ECS_TASK_DEFINITION }}
 
+      # --- NOVO PASSO DE DEPURAÇÃO ---
+      - name: Show task definition content after replace
+        run: cat ${{ secrets.ECS_TASK_DEFINITION }}
+
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
